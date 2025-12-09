@@ -107,7 +107,7 @@ class SkillsManager:
         """Scan skills directory and parse metadata from all .md files"""
         self._available_skills.clear()
         
-        for md_file in self.skills_dir.glob("*.md"):
+        for md_file in self.skills_dir.rglob("*.md"):
             try:
                 metadata = self._parse_skill_metadata(md_file)
                 self._available_skills[metadata.name] = metadata
@@ -279,7 +279,23 @@ skills_manager = SkillsManager()
 # MCP Tools (Protocol-Driven Interface)
 # ============================================================================
 
-@mcp.tool()
+
+@mcp.tool(
+    name="list_skills",
+    description="""
+    List all available skills with their metadata (lightweight operation).
+    
+    This is ALWAYS the first tool the AI should call to discover available skills.
+    Returns metadata only - no full content is loaded.
+    
+    The AI should analyze the metadata (description, keywords) to determine
+    which skills are relevant to the user's query, then call load_skill
+    for the specific skills needed.
+    
+    Returns:
+        SkillsListResult with all available skills metadata
+    """
+)
 def list_skills() -> SkillsListResult:
     """
     List all available skills with their metadata (lightweight operation).
@@ -306,7 +322,29 @@ def list_skills() -> SkillsListResult:
     )
 
 
-@mcp.tool()
+@mcp.tool(
+    name="load_skill",
+    description="""
+    Load the full content of a specific skill into context.
+    
+    IMPORTANT BEHAVIOR:
+    - If skill is already loaded, returns status="already_loaded" WITHOUT
+      returning the content again (to avoid wasting context tokens)
+    - Use force_reload=true to reload a skill that's already loaded
+    - The AI should check the status field in the response
+    
+    Design Pattern:
+    This follows the "Result Object" pattern - always returns a structured
+    result with status, never throws exceptions to the LLM.
+    
+    Args:
+        skill_name: Name of the skill to load (from list_skills)
+        force_reload: If true, reload even if already loaded
+    
+    Returns:
+        SkillLoadResult with status and content (if newly loaded)
+    """
+)
 def load_skill(
     skill_name: str,
     force_reload: bool = False
@@ -332,73 +370,6 @@ def load_skill(
         SkillLoadResult with status and content (if newly loaded)
     """
     return skills_manager.load_skill_content(skill_name, force_reload)
-
-
-@mcp.tool()
-def unload_skill(skill_name: str) -> Dict[str, Any]:
-    """
-    Remove a skill from loaded context to free up tokens.
-    
-    Use this when switching to a different domain and the current
-    skill is no longer needed.
-    
-    Args:
-        skill_name: Name of the skill to unload
-    
-    Returns:
-        Result with success status and freed tokens
-    """
-    if not skills_manager.is_skill_loaded(skill_name):
-        return {
-            "status": "error",
-            "message": f"Skill '{skill_name}' is not currently loaded"
-        }
-    
-    # Get token count before unloading
-    tokens_freed = skills_manager._loaded_skills[skill_name]['tokens']
-    
-    skills_manager.unload_skill(skill_name)
-    
-    return {
-        "status": "success",
-        "skill_name": skill_name,
-        "message": f"Skill '{skill_name}' unloaded",
-        "tokens_freed": tokens_freed,
-        "remaining_loaded": skills_manager.get_loaded_skill_names()
-    }
-
-
-@mcp.tool()
-def reload_skills_directory() -> Dict[str, Any]:
-    """
-    Rescan the skills directory for new or updated skill files.
-    
-    Use this after adding new skill files or modifying existing ones.
-    Note: Does not affect currently loaded skills in memory.
-    
-    Returns:
-        Summary of the rescan operation
-    """
-    result = skills_manager.reload_directory()
-    return {
-        "status": "success",
-        **result
-    }
-
-
-@mcp.tool()
-def get_loaded_skills_info() -> Dict[str, Any]:
-    """
-    Get information about currently loaded skills.
-    
-    Returns:
-        Dictionary with loaded skills names and total tokens
-    """
-    return {
-        "loaded_skills": skills_manager.get_loaded_skill_names(),
-        "total_loaded": len(skills_manager.get_loaded_skill_names()),
-        "total_tokens": skills_manager.get_total_loaded_tokens()
-    }
 
 
 # ============================================================================
