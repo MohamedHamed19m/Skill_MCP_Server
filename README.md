@@ -1,9 +1,9 @@
-# Skills MCP Server for Gemini
-
-An MCP (Model Context Protocol) server for loading skills on demand, designed to be used as a Gemini extension. This helps AI agents manage their context window by loading and unloading skills as needed.
+# Skill: GEMINI Extension
+An extension that contains an MCP (Model Context Protocol) server for loading skills on demand. 
 
 ## Overview
-This project provides a flexible and dynamic way to provide "skills" to an AI agent. This Gemini extension contains an MCP (Model Context Protocol) server for loading skills on demand, and custom commands. This helps AI agents manage their context window by loading and unloading skills as needed.
+This project provides a flexible and dynamic way to provide "skills" to an AI agent. This Gemini extension includes an MCP (Model Context Protocol) server for loading skills on demand and for custom commands. 
+This helps AI agents manage their context window by loading skills as needed.
 
 ## As a Gemini Extension
 
@@ -15,7 +15,7 @@ The MCP server is defined in `mcp_app/skills_server.py`, and custom commands are
 
 Skills are organized in a directory structure. The server scans the `skills` directory within the project.
 
-Each skill must be in its own directory. The name of the directory is the name of the skill. Inside the skill directory, there must be a file named `SKILL.md`.
+Each skill must be in its own directory. The directory name is the skill name. Inside the skill directory, there must be a file named `SKILL.md`.
 
 Example structure:
 ```
